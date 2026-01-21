@@ -25,8 +25,3 @@ ram('ADATA', 'XPG Spectrix D50', 16, 3200, 'DDR4', 279.90).
 placa_mae('ASUS', 'TUF Gaming B550-PLUS', 'AM4', 'B550', 'DDR4', 899.90).
 placa_mae('Gigabyte', 'B760M DS3H', 'LGA1700', 'B760', 'DDR4', 749.90).
 placa_mae('ASRock', 'B450M-HDV', 'AM4', 'B450', 'DDR4', 429.90).
-
-% FATOS AUXILIARES: Requisitos por resolução para jogos
-requisitos_resolucao('1080p', 15000, 16, 500, 500).    % Full HD
-requisitos_resolucao('1440p', 25000, 16, 1000, 650).   % Quad HD (2K)
-requisitos_resolucao('4k', 35000, 32, 1000, 750).      % Ultra HD (4K)
