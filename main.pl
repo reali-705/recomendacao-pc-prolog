@@ -2,13 +2,14 @@
 :- consult('dados/componentes.pl').
 :- consult('dados/requisitos.pl').
 
+% Carregar utilitários (dicts e exibição)
+:- consult('util/transformacao.pl').
+:- consult('util/exibicao.pl').
+
 % Carregar módulos de regras
 :- consult('regras/filtros.pl').
 :- consult('regras/compatibilidade.pl').
 :- consult('regras/recomendacao.pl').
-
-% Carregar utilitários
-:- consult('util/exibicao.pl').
 
 % Inicialização
 :- initialization(main).

@@ -1,60 +1,69 @@
+% ========================================
 % REGRA PRINCIPAL: Recomendação completa de PC
-pc_recomendacao(OrcamentoTotal, Resolucao, PC) :-
+% Refatorada para usar filtros genéricos com dicts
+% ========================================
+pc_recomendacao(OrcamentoTotal, Resolucao, RecomendacaoPC) :-
     % 1. Obter requisitos mínimos para a resolução
-    requisitos_resolucao(Resolucao, G3DMark_Min, RAM_Min, SSD_Min, Fonte_W_Min),
+    requisitos_resolucao(Resolucao, DesempenhoG3DMarkMinimo, CapacidadeMemoriaMinima, CapacidadeArmazenamentoMinima, PotenciaFonteMinima),
     
-    % 2. Selecionar GPU que atende aos requisitos
-    gpu(MarcaGPU, ModeloGPU, MemGPU, _AnoGPU, G3DMark, PrecoGPU), 
-    G3DMark >= G3DMark_Min,
+    % 2. Selecionar GPU usando filtro genérico
+    recomendar_por_chaves(gpu, [g3dmark-(>=)-DesempenhoG3DMarkMinimo], PlacaVideo),
+    get_dict(preco, PlacaVideo, PrecoPlacaVideo),
     
-    % 3. Selecionar RAM
-    ram(MarcaRAM, ModeloRAM, CapacidadeRAM, VelocidadeRAM, TipoRAM, PrecoRAM),
-    CapacidadeRAM >= RAM_Min,
+    % 3. Selecionar RAM usando filtro genérico
+    recomendar_por_chaves(ram, [capacidade-(>=)-CapacidadeMemoriaMinima], Memoria),
+    get_dict(tipo, Memoria, TipoMemoria),
+    get_dict(preco, Memoria, PrecoMemoria),
     
-    % 4. Selecionar SSD
-    ssd(MarcaSSD, ModeloSSD, CapacidadeSSD, _InterfaceSSD, VelSSD, PrecoSSD),
-    CapacidadeSSD >= SSD_Min,
+    % 4. Selecionar SSD usando filtro genérico
+    recomendar_por_chaves(ssd, [capacidade-(>=)-CapacidadeArmazenamentoMinima], Armazenamento),
+    get_dict(preco, Armazenamento, PrecoArmazenamento),
     
-    % 5. Selecionar Fonte
-    fonte(MarcaFonte, ModeloFonte, PotenciaFonte, CertificacaoFonte, PrecoFonte),
-    PotenciaFonte >= Fonte_W_Min,
+    % 5. Selecionar Fonte usando filtro genérico
+    recomendar_por_chaves(fonte, [potencia-(>=)-PotenciaFonteMinima], FontePoder),
+    get_dict(preco, FontePoder, PrecoFontePoder),
     
-    % 6. Selecionar Placa-mãe
-    placa_mae(MarcaMB, ModeloMB, SoqueteMB, ChipsetMB, TipoRAM_MB, PrecoMB),
+    % 6. Selecionar Placa-mãe com tipo RAM compatível
+    recomendar_por_chaves(placa_mae, [tipo_ram-(==)-TipoMemoria], PlacaMae),
+    get_dict(preco, PlacaMae, PrecoPlacaMae),
     
-    % 7. Verificar compatibilidade
-    TipoRAM_MB = TipoRAM,
+    % 7. Calcular preço total
+    PrecoTotalPC is PrecoPlacaVideo + PrecoMemoria + PrecoArmazenamento + PrecoFontePoder + PrecoPlacaMae,
     
-    % 8. Calcular preço total
-    PrecoTotal is PrecoGPU + PrecoRAM + PrecoSSD + PrecoFonte + PrecoMB,
-    
-    % 9. Verificar orçamento (com margem de 20%)
+    % 8. Verificar orçamento (com margem de 20%)
     OrcamentoComMargem is OrcamentoTotal * 1.2,
-    PrecoTotal =< OrcamentoComMargem,
+    PrecoTotalPC =< OrcamentoComMargem,
     
-    % 10. Calcular diferença do orçamento
-    Diferenca is abs(PrecoTotal - OrcamentoTotal),
+    % 9. Calcular diferença do orçamento
+    DiferencaOrcamento is abs(PrecoTotalPC - OrcamentoTotal),
     
-    % 11. Construir estrutura de retorno
-    PC = pc(
+    % 10. Construir estrutura de retorno (com dicts)
+    RecomendacaoPC = pc(
         Resolucao,
-        PrecoTotal,
-        Diferenca,
-        gpu(MarcaGPU, ModeloGPU, MemGPU, G3DMark, PrecoGPU),
-        ram(MarcaRAM, ModeloRAM, CapacidadeRAM, VelocidadeRAM, PrecoRAM),
-        ssd(MarcaSSD, ModeloSSD, CapacidadeSSD, VelSSD, PrecoSSD),
-        fonte(MarcaFonte, ModeloFonte, PotenciaFonte, CertificacaoFonte, PrecoFonte),
-        placa_mae(MarcaMB, ModeloMB, SoqueteMB, ChipsetMB, PrecoMB)
+        PrecoTotalPC,
+        DiferencaOrcamento,
+        PlacaVideo,
+        Memoria,
+        Armazenamento,
+        FontePoder,
+        PlacaMae
     ).
 
 % Busca as 3 melhores recomendações ordenadas por proximidade do orçamento.
-melhores_recomendacoes(Orcamento, Resolucao, Top3) :-
-    findall(PC, pc_recomendacao(Orcamento, Resolucao, PC), Todos),
-    sort(3, @=<, Todos, Top3).
+melhores_recomendacoes(OrcamentoTotal, Resolucao, Top3MelhoresRecomendacoes) :-
+    findall(DiferencaOrcamento-RecomendacaoPC, 
+            (pc_recomendacao(OrcamentoTotal, Resolucao, RecomendacaoPC),
+             RecomendacaoPC = pc(_, _, DiferencaOrcamento, _, _, _, _, _)),
+            ParesOrdenacao),
+    keysort(ParesOrdenacao, RecomendacoesOrdenadas),
+    (   RecomendacoesOrdenadas = [_-RecomendacaoPC1, _-RecomendacaoPC2, _-RecomendacaoPC3|_]
+    ->  Top3MelhoresRecomendacoes = [RecomendacaoPC1, RecomendacaoPC2, RecomendacaoPC3]
+    ;   findall(RecomendacaoPC, member(_-RecomendacaoPC, RecomendacoesOrdenadas), Top3MelhoresRecomendacoes)
+    ).
 
 % Auxiliar: calcula preço total de uma lista de componentes.
 calcular_preco_total([], 0).
-calcular_preco_total([Componente | Resto], Total) :-
-    extrair_preco(Componente, Preco),
-    calcular_preco_total(Resto, Subtotal),
-    Total is Preco + Subtotal.
+calcular_preco_total([ComponenteAtual | RestanteComponentes], PrecoTotalAcumulado) :-
+    extrair_preco(ComponenteAtual, PrecoComponente),
+    calcular_preco_total(RestanteComponentes, PrecoTotalRestante),
+    PrecoTotalAcumulado is PrecoComponente + PrecoTotalRestante.

@@ -1,44 +1,60 @@
-% Recomenda GPU por desempenho mínimo (G3DMark).
-recomendar_gpu_desempenho(DesempenhoMin, gpu(Marca, Modelo, Mem, Ano, Perf, Preco)) :-
-    gpu(Marca, Modelo, Mem, Ano, Perf, Preco),
-    Perf >= DesempenhoMin.
+% Core genérico: recomenda componente com base em restrições por chave.
+% Restricoes é uma lista de Chave-Operador-Valor, ex: [g3dmark-(>=)-20000, preco-(=<)-3500].
+recomendar_por_chaves(TipoComponente, Restricoes, DictComponenteRetornado) :-
+    chamar_componente_dict(TipoComponente, DictComponenteRetornado),
+    satisfaz_chaves(DictComponenteRetornado, Restricoes).
 
-% Recomenda fonte por potência mínima e certificação específica.
-recomendar_fonte(PotenciaMin, Certificacao, fonte(Marca, Modelo, Pot, Cert, Preco)) :-
-    fonte(Marca, Modelo, Pot, Cert, Preco),
-    Pot >= PotenciaMin,
-    (Certificacao == 'qualquer' -> true; Cert == Certificacao).
+% Variante que devolve todas as correspondências em lista (não ordena).
+filtrar_componentes(TipoComponente, Restricoes, ListaComponentes) :-
+    findall(ComponenteAtual, recomendar_por_chaves(TipoComponente, Restricoes, ComponenteAtual), ListaComponentes).
 
-% Recomenda SSD por capacidade mínima e interface.
-recomendar_ssd(CapacidadeMin, Interface, ssd(Marca, Modelo, Cap, Int, Vel, Preco)) :-
-    ssd(Marca, Modelo, Cap, Int, Vel, Preco),
-    Cap >= CapacidadeMin,
-    (Interface == 'qualquer' -> true; sub_atom(Int, _, _, _, Interface)).
+satisfaz_chaves(_, []).
+satisfaz_chaves(DictAtual, [ChaveAtual-OperadorAtual-ValorEsperado | RestricoesPendentes]) :-
+    get_dict(ChaveAtual, DictAtual, ValorAtualDict),
+    aplicar_operador(OperadorAtual, ValorAtualDict, ValorEsperado),
+    satisfaz_chaves(DictAtual, RestricoesPendentes).
 
-% Recomenda RAM por capacidade mínima.
-recomendar_ram(CapacidadeMin, ram(Marca, Modelo, Cap, Vel, Tipo, Preco)) :-
-    ram(Marca, Modelo, Cap, Vel, Tipo, Preco),
-    Cap >= CapacidadeMin.
+aplicar_operador(>=, ValorAtual, ValorEsperado) :- ValorAtual >= ValorEsperado.
+aplicar_operador(=<, ValorAtual, ValorEsperado) :- ValorAtual =< ValorEsperado.
+aplicar_operador(>, ValorAtual, ValorEsperado)  :- ValorAtual > ValorEsperado.
+aplicar_operador(<, ValorAtual, ValorEsperado)  :- ValorAtual < ValorEsperado.
+aplicar_operador(==, ValorAtual, ValorEsperado) :- ValorAtual == ValorEsperado.
+aplicar_operador(contem, TextoAtual, SubstringBuscada) :- atom(TextoAtual), sub_atom(TextoAtual, _, _, _, SubstringBuscada).
 
-% Recomenda componente genérico por preço máximo.
-recomendar_por_preco(TipoComponente, PrecoMax, Componente) :-
-    chamar_componente(TipoComponente, Componente),
-    extrair_preco(Componente, Preco),
-    Preco =< PrecoMax.
+% Wrappers amigáveis (mantêm interface simples)
 
-% Auxiliar: extrai o último argumento (preço) de um termo.
-extrair_preco(Componente, Preco) :-
-    Componente =.. [_|Args],
-    last(Args, Preco).
+% GPU por desempenho mínimo
+recomendar_gpu_desempenho(DesempenhoMinimo, PlacaVideoRetornada) :-
+    recomendar_por_chaves(gpu, [g3dmark-(>=)-DesempenhoMinimo], PlacaVideoRetornada).
 
-% Auxiliar: chama o predicado apropriado para cada tipo de componente.
-chamar_componente(gpu, gpu(M, Mod, Mem, A, Perf, P)) :- 
-    gpu(M, Mod, Mem, A, Perf, P).
-chamar_componente(ram, ram(M, Mod, C, V, T, P)) :- 
-    ram(M, Mod, C, V, T, P).
-chamar_componente(ssd, ssd(M, Mod, C, I, V, P)) :- 
-    ssd(M, Mod, C, I, V, P).
-chamar_componente(fonte, fonte(M, Mod, Pot, Cert, P)) :- 
-    fonte(M, Mod, Pot, Cert, P).
-chamar_componente(placa_mae, placa_mae(M, Mod, S, Chip, T, P)) :- 
-    placa_mae(M, Mod, S, Chip, T, P).
+% Fonte por potência mínima e certificação
+recomendar_fonte(PotenciaMinima, CertificacaoDesejada, FontePoder) :-
+    ( CertificacaoDesejada == 'qualquer' ->
+        recomendar_por_chaves(fonte, [potencia-(>=)-PotenciaMinima], FontePoder)
+    ;   recomendar_por_chaves(fonte, [potencia-(>=)-PotenciaMinima, certificacao-(==)-CertificacaoDesejada], FontePoder)
+    ).
+
+% SSD por capacidade (e opcional interface)
+recomendar_ssd(CapacidadeMinima, ArmazenamentoRetornado) :-
+    recomendar_por_chaves(ssd, [capacidade-(>=)-CapacidadeMinima], ArmazenamentoRetornado).
+
+recomendar_ssd(CapacidadeMinima, InterfaceDesejada, ArmazenamentoRetornado) :-
+    ( InterfaceDesejada == 'qualquer' ->
+        recomendar_ssd(CapacidadeMinima, ArmazenamentoRetornado)
+    ;   recomendar_por_chaves(ssd, [capacidade-(>=)-CapacidadeMinima, interface-contem-InterfaceDesejada], ArmazenamentoRetornado)
+    ).
+
+% RAM por capacidade mínima
+recomendar_ram(CapacidadeMinima, MemoriaRetornada) :-
+    recomendar_por_chaves(ram, [capacidade-(>=)-CapacidadeMinima], MemoriaRetornada).
+
+% Componente por preço máximo (qualquer tipo)
+recomendar_por_preco(TipoComponente, PrecoMaximo, ComponenteRetornado) :-
+    recomendar_por_chaves(TipoComponente, [preco-(=<)-PrecoMaximo], ComponenteRetornado).
+
+% Auxiliar compatível com termos e dicts
+extrair_preco(ComponenteOuDict, PrecoExtraido) :-
+    (   is_dict(ComponenteOuDict)
+    ->  get_dict(preco, ComponenteOuDict, PrecoExtraido)
+    ;   ComponenteOuDict =.. [_|ArgumentosList], last(ArgumentosList, PrecoExtraido)
+    ).
