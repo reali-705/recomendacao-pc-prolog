@@ -26,7 +26,8 @@ placa_mae('ASUS', 'TUF Gaming B550-PLUS', 'AM4', 'B550', 'DDR4', 899.90).
 placa_mae('Gigabyte', 'B760M DS3H', 'LGA1700', 'B760', 'DDR4', 749.90).
 placa_mae('ASRock', 'B450M-HDV', 'AM4', 'B450', 'DDR4', 429.90).
 
-% FATOS AUXILIARES: Requisitos por resolução para jogos
-requisitos_resolucao('1080p', 15000, 16, 500, 500).    % Full HD
-requisitos_resolucao('1440p', 25000, 16, 1000, 650).   % Quad HD (2K)
-requisitos_resolucao('4k', 35000, 32, 1000, 750).      % Ultra HD (4K)
+% cpu(Marca, Modelo, Soquete, Cores, FrequenciaGHz, TDP_W, PrecoBRL).
+cpu('AMD', 'Ryzen 5 5600X', 'AM4', 6, 3.7, 65, 899.90).
+cpu('AMD', 'Ryzen 7 5800X3D', 'AM4', 8, 3.4, 105, 1799.90).
+cpu('Intel', 'Core i5-13400F', 'LGA1700', 10, 2.5, 65, 1099.90).
+cpu('Intel', 'Core i7-13700K', 'LGA1700', 16, 3.4, 125, 2299.90).
