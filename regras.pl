@@ -1,110 +1,134 @@
-% --- 3. REGRAS AUXILIARES (PARA SUPORTE INTERNO) --- %
-chamar_predicado(ssd, [M, Mod, C, I, V, P]) :- ssd(M, Mod, C, I, V, P).
-chamar_predicado(fonte, [M, Mod, Pot, Cert, P]) :- fonte(M, Mod, Pot, Cert, P).
-chamar_predicado(gpu, [M, Mod, Mem, A, Perf, P]) :- gpu(M, Mod, Mem, A, Perf, P).
-chamar_predicado(ram, [M, Mod, C, V, T, P]) :- ram(M, Mod, C, V, T, P).
-chamar_predicado(placa_mae, [M, Mod, S, Chip, T, P]) :- placa_mae(M, Mod, S, Chip, T, P).
+% SISTEMA DE RECOMENDAÇÃO DE COMPONENTES PARA PC - REGRAS ESSENCIAIS
+% Arquivo: regras.pl
+% Contém todas as regras essenciais do projeto
 
-calcular_preco_total([], 0).
-calcular_preco_total([Componente | Resto], Total) :-
-    last(Componente, Preco),
-    calcular_preco_total(Resto, Subtotal),
-    Total is Preco + Subtotal.
+:- use_module(library(lists)).
 
-% REGRA GERAL: Recomenda qualquer componente com preço menor ou igual ao máximo.
-recomendar_preco(TipoComponente, PrecoMax, Componente) :-
-    chamar_predicado(TipoComponente, Atributos),
-    nth1(6, Atributos, Preco),
-    Preco =< PrecoMax,
-    Componente = Atributos.
+:- ensure_loaded(dados).
 
-% REGRA PARA PLACA DE VÍDEO: Recomenda por desempenho mínimo (G3DMark).
-recomendar_gpu_desempenho(DesempenhoMin, gpu(Marca, Modelo, Mem, Ano, Perf, PrecoBRL)) :-
-    gpu(Marca, Modelo, Mem, Ano, Perf, PrecoBRL),
-    Perf >= DesempenhoMin.
+% --- REGRA GERAL PARA CONSULTA POR PREÇO ---
+recomendar_preco(cpu, PrecoMax, cpu(Marca, Modelo, Sock, Perf, Nuc, Clock, VR, MS, TDP, Preco)) :-
+    cpu(Marca, Modelo, Sock, Perf, Nuc, Clock, VR, MS, TDP, Preco),
+    Preco =< PrecoMax.
 
-% REGRA PARA FONTE: Recomenda por potência mínima e certificação específica.
-recomendar_fonte(PotenciaMin, Certificacao, fonte(Marca, Modelo, Pot, Cert, PrecoBRL)) :-
-    fonte(Marca, Modelo, Pot, Cert, PrecoBRL),
-    Pot >= PotenciaMin,
-    (Certificacao == 'qualquer' -> true; Cert == Certificacao).
+recomendar_preco(gpu, PrecoMax, gpu(Marca, Modelo, Mem, Perf, Preco)) :-
+    gpu(Marca, Modelo, Mem, Perf, Preco),
+    Preco =< PrecoMax.
 
-% REGRA PARA SSD: Recomenda por capacidade mínima e interface.
-recomendar_ssd(CapacidadeMin, Interface, ssd(Marca, Modelo, Cap, Int, Vel, PrecoBRL)) :-
-    ssd(Marca, Modelo, Cap, Int, Vel, PrecoBRL),
-    Cap >= CapacidadeMin,
-    (Interface == 'qualquer' -> true; sub_atom(Int, _, _, _, Interface)).
+recomendar_preco(ram, PrecoMax, ram(Marca, Modelo, Cap, Vel, Tipo, Preco)) :-
+    ram(Marca, Modelo, Cap, Vel, Tipo, Preco),
+    Preco =< PrecoMax.
 
-% REGRA PARA COMPATIBILIDADE BÁSICA: Sugere RAM compatível com uma placa-mãe.
-compativel_ram_placa(NomePlacaMae, ram(RamMarca, RamModelo, Cap, Vel, Tipo, PrecoBRL)) :-
-    placa_mae(_, NomePlacaMae, _, _, TipoRAM, _),
-    ram(RamMarca, RamModelo, Cap, Vel, Tipo, PrecoBRL),
-    Tipo == TipoRAM.
+recomendar_preco(ssd, PrecoMax, ssd(Marca, Modelo, Cap, Vel, Preco)) :-
+    ssd(Marca, Modelo, Cap, Vel, Preco),
+    Preco =< PrecoMax.
+
+recomendar_preco(fonte, PrecoMax, fonte(Marca, Modelo, Pot, Cert, Preco)) :-
+    fonte(Marca, Modelo, Pot, Cert, Preco),
+    Preco =< PrecoMax.
+
+recomendar_preco(placa_mae, PrecoMax, placa_mae(Marca, Modelo, Sock, Chip, T, Preco)) :-
+    placa_mae(Marca, Modelo, Sock, Chip, T, Preco),
+    Preco =< PrecoMax.
+
+% --- REGRAS PARA RECOMENDAÇÃO COMPLETA DE PC (OPÇÃO 1) ---
 
 % REGRA PRINCIPAL: Recomendação completa de PC
-pc_recomendacao(OrcamentoTotal, Resolucao, Recomendacoes) :-
+pc_recomendacao(OrcamentoTotal, Resolucao, [PC]) :-
     % 1. Obter requisitos mínimos para a resolução
-    requisitos_resolucao(Resolucao, G3DMark_Min, RAM_Min, SSD_Min, Fonte_W_Min),
-    
+    requisitos_resolucao(Resolucao, G3DMark_Min, RAM_Min, SSD_Min, Fonte_W_Min, CPU_Min),
+
     % 2. Encontrar componentes que atendam aos requisitos mínimos
-    gpu(MarcaGPU, ModeloGPU, MemGPU, AnoGPU, G3DMark, PrecoGPU), 
-    
+    gpu(MarcaGPU, ModeloGPU, MemGPU, G3DMark, PrecoGPU),
     G3DMark >= G3DMark_Min,
-    
+
     ram(MarcaRAM, ModeloRAM, CapacidadeRAM, VelocidadeRAM, TipoRAM, PrecoRAM),
     CapacidadeRAM >= RAM_Min,
-    
-    ssd(MarcaSSD, ModeloSSD, CapacidadeSSD, InterfaceSSD, VelSSD, PrecoSSD),
+
+    ssd(MarcaSSD, ModeloSSD, CapacidadeSSD, VelSSD, PrecoSSD),
     CapacidadeSSD >= SSD_Min,
-    
+
     fonte(MarcaFonte, ModeloFonte, PotenciaFonte, CertificacaoFonte, PrecoFonte),
     PotenciaFonte >= Fonte_W_Min,
-    
+
+    cpu(MarcaCPU, ModeloCPU, SoqueteCPU, NivelCPU, NucCPU, ClockCPU, VelMaxCPU, MemSupCPU, TDPCPU, PrecoCPU),
+    NivelCPU >= CPU_Min,
+
     placa_mae(MarcaMB, ModeloMB, SoqueteMB, ChipsetMB, TipoRAM_MB, PrecoMB),
-    TipoRAM_MB = TipoRAM,
     
-    % 3. Calcular preço total (TODOS JÁ EM BRL - SEM CONVERSÃO!)
-    PrecoTotal is PrecoGPU + PrecoRAM + PrecoSSD + PrecoFonte + PrecoMB,
+    % 3. Verificar compatibilidade básica
+    SoqueteMB == SoqueteCPU,
+    TipoRAM_MB == TipoRAM,
     
-    % 4. Verificar se está dentro do orçamento (com margem de 20%)
+    % 4. Verificar compatibilidade RAM com CPU
+    ram_compativel_cpu(TipoRAM, cpu(MarcaCPU, ModeloCPU, SoqueteCPU, NivelCPU, NucCPU, ClockCPU, VelMaxCPU, MemSupCPU, TDPCPU, PrecoCPU)),
+    
+    % 5. Calcular preço total
+    PrecoTotal is PrecoGPU + PrecoRAM + PrecoSSD + PrecoFonte + PrecoCPU + PrecoMB,
+
+    % 6. Verificar se está dentro do orçamento (com margem de 20%)
     OrcamentoComMargem is OrcamentoTotal * 1.2,
     PrecoTotal =< OrcamentoComMargem,
-    
-    % 5. Calcular diferença para ordenação
+
+    % 7. Calcular diferença para ordenação
     Diferenca is abs(PrecoTotal - OrcamentoTotal),
-    
-    % 6. Retornar todas as recomendações encontradas
-    Recomendacoes = [
-        pc(
+
+    % 8. Criar estrutura de retorno
+    PC = pc(
             Resolucao,
             PrecoTotal,
             Diferenca,
-            gpu(MarcaGPU, ModeloGPU, MemGPU, G3DMark, PrecoGPU),  % Preço já em BRL
+            cpu(MarcaCPU, ModeloCPU, NivelCPU, PrecoCPU),
+            gpu(MarcaGPU, ModeloGPU, MemGPU, G3DMark, PrecoGPU),
             ram(MarcaRAM, ModeloRAM, CapacidadeRAM, VelocidadeRAM, PrecoRAM),
             ssd(MarcaSSD, ModeloSSD, CapacidadeSSD, VelSSD, PrecoSSD),
             fonte(MarcaFonte, ModeloFonte, PotenciaFonte, CertificacaoFonte, PrecoFonte),
             placa_mae(MarcaMB, ModeloMB, SoqueteMB, ChipsetMB, PrecoMB)
-        )
-    ].
+        ).
 
-% REGRA PARA BUSCAR AS 3 MELHORES RECOMENDAÇÕES
+% REGRA PARA BUSCAR AS MELHORES RECOMENDAÇÕES
 melhores_recomendacoes(Orcamento, Resolucao, Top3) :-
     findall(PC, pc_recomendacao(Orcamento, Resolucao, [PC]), Todos),
-    sort(3, @=<, Todos, Top3).
+    sort_by_difference(Todos, Ordenados),
+    take_first(Ordenados, 3, Top3).
+
+% Ordena pela diferença do orçamento
+sort_by_difference(List, Sorted) :-
+    predsort(compare_by_difference, List, Sorted).
+
+compare_by_difference(Order, pc(_, _, Diff1, _, _, _, _, _, _), pc(_, _, Diff2, _, _, _, _, _, _)) :-
+    compare(Order, Diff1, Diff2).
+
+% Pega os primeiros N elementos
+take_first(List, N, FirstN) :-
+    length(List, Len),
+    (Len >= N ->
+        length(FirstN, N),
+        append(FirstN, _, List)
+    ;
+        FirstN = List
+    ).
 
 % REGRA PARA MOSTRAR RECOMENDAÇÕES DE FORMA LEGÍVEL
-mostrar_recomendacao(pc(Res, Total, Diff, GPU, RAM, SSD, Fonte, PlacaMae)) :-
+mostrar_recomendacao(pc(Res, Total, Diff, 
+                         cpu(CPU_Marca, CPU_Modelo, CPU_Desempenho, CPU_Preco),
+                         gpu(GPU_Marca, GPU_Modelo, GPU_Memoria, GPU_Desempenho, GPU_Preco),
+                         ram(RAM_Marca, RAM_Modelo, RAM_Capacidade, RAM_Velocidade, RAM_Preco),
+                         ssd(SSD_Marca, SSD_Modelo, SSD_Capacidade, SSD_Velocidade, SSD_Preco),
+                         fonte(Fonte_Marca, Fonte_Modelo, Fonte_Potencia, Fonte_Certificacao, Fonte_Preco),
+                         placa_mae(Placa_Marca, Placa_Modelo, Placa_Soquete, Placa_Chipset, Placa_Preco))) :-
     format('~n=== RECOMENDAÇÃO PARA ~w ===', [Res]),
     format('~nPreço Total: R$ ~2f (Diferença do orçamento: R$ ~2f)', [Total, Diff]),
     format('~n~nComponentes:'),
-    format('~n- GPU: ~w ~w (~wGB, ~w pontos) - R$ ~2f', 
-           [GPU%gpu.marca, GPU%gpu.modelo, GPU%gpu.memoria, GPU%gpu.desempenho, GPU%gpu.preco]),
-    format('~n- RAM: ~w ~w (~wGB, ~wMHz) - R$ ~2f', 
-           [RAM%ram.marca, RAM%ram.modelo, RAM%ram.capacidade, RAM%ram.velocidade, RAM%ram.preco]),
-    format('~n- SSD: ~w ~w (~wGB, ~w MB/s) - R$ ~2f', 
-           [SSD%ssd.marca, SSD%ssd.modelo, SSD%ssd.capacidade, SSD%ssd.velocidade, SSD%ssd.preco]),
-    format('~n- Fonte: ~w ~w (~wW, ~w) - R$ ~2f', 
-           [Fonte%fonte.marca, Fonte%fonte.modelo, Fonte%fonte.potencia, Fonte%fonte.certificacao, Fonte%fonte.preco]),
-    format('~n- Placa-mãe: ~w ~w (~w, ~w) - R$ ~2f~n', 
-           [PlacaMae%placa_mae.marca, PlacaMae%placa_mae.modelo, 
-            PlacaMae%placa_mae.soquete, PlacaMae%placa_mae.chipset, PlacaMae%placa_mae.preco]).
+    format('~n- CPU: ~w ~w (Desempenho: ~w) - R$ ~2f',
+           [CPU_Marca, CPU_Modelo, CPU_Desempenho, CPU_Preco]),
+    format('~n- GPU: ~w ~w (~wGB, ~w pontos) - R$ ~2f',
+           [GPU_Marca, GPU_Modelo, GPU_Memoria, GPU_Desempenho, GPU_Preco]),
+    format('~n- RAM: ~w ~w (~wGB, ~wMHz) - R$ ~2f',
+           [RAM_Marca, RAM_Modelo, RAM_Capacidade, RAM_Velocidade, RAM_Preco]),
+    format('~n- SSD: ~w ~w (~wGB, ~w MB/s) - R$ ~2f',
+           [SSD_Marca, SSD_Modelo, SSD_Capacidade, SSD_Velocidade, SSD_Preco]),
+    format('~n- Fonte: ~w ~w (~wW, ~w) - R$ ~2f',
+           [Fonte_Marca, Fonte_Modelo, Fonte_Potencia, Fonte_Certificacao, Fonte_Preco]),
+    format('~n- Placa-mãe: ~w ~w (~w, ~w) - R$ ~2f~n',
+           [Placa_Marca, Placa_Modelo, Placa_Soquete, Placa_Chipset, Placa_Preco]).

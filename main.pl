@@ -1,11 +1,10 @@
-:- consult('dados.pl').
-:- consult('regras.pl').
+% SISTEMA DE RECOMENDAÇÃO DE COMPONENTES PARA PC - MAIN
+% Arquivo: main.pl
+% Para executar: swipl -s main.pl
 
-:- initialization(main).
+:- ensure_loaded(dados).
+:- ensure_loaded(regras).
+:- ensure_loaded(menu).
 
-main :-
-    writeln('=== SISTEMA DE RECOMENDACAO DE PC ==='),
-    writeln('Consulte usando: "melhores_recomendacoes(Orcamento, Resolucao, Top3)."'),
-    writeln('Exemplo: melhores_recomendacoes(5000, "1080p", Top3).'),
-    nl.
-
+% Para iniciar o programa diretamente
+:- initialization(menu_principal).
