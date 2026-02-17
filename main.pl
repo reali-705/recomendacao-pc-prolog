@@ -1,4 +1,4 @@
-% SISTEMA DE RECOMENDAÇÃO DE COMPONENTES PARA PC - MAIN
+% SISTEMA DE RECOMENDACAO DE COMPONENTES PARA PC - MAIN
 % Arquivo: main.pl
 % Para executar: swipl -s main.pl
 

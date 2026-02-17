@@ -1,10 +1,10 @@
-% SISTEMA DE RECOMENDAÇÃO DE COMPONENTES PARA PC - BASE DE DADOS
+% SISTEMA DE RECOMENDACAO DE COMPONENTES PARA PC - BASE DE DADOS
 % Arquivo: dados.pl
-% Contém todos os fatos sobre componentes de PC
+% Contem todos os fatos sobre componentes de PC
 
 % ==================== CPUs (PROCESSADORES) ====================
-% cpu(Marca, Modelo, Soquete, NivelDesempenho, Núcleos, ClockGHz, VelMaxRAM, MemSuportada, TDP, PrecoBRL)
-% NivelDesempenho: Pontuação relativa para comparação (baseada em benchmarks)
+% cpu(Marca, Modelo, Soquete, NivelDesempenho, Nucleos, ClockGHz, VelMaxRAM, MemSuportada, TDP, PrecoBRL)
+% NivelDesempenho: Pontuacao relativa para comparacao (baseada em benchmarks)
 
 % AMD Socket AM4 (DDR4)
 cpu('AMD', 'Ryzen 5 5500', 'AM4', 14500, 6, 4.2, 3200, 'DDR4', 65, 499.90).
@@ -20,11 +20,11 @@ cpu('Intel', 'Core i5-13400F', 'LGA1700', 21000, 10, 4.6, 4800, 'DDR4/DDR5', 148
 cpu('Intel', 'Core i5-13600K', 'LGA1700', 28000, 14, 5.1, 5600, 'DDR4/DDR5', 181, 1699.90).
 cpu('Intel', 'Core i7-13700K', 'LGA1700', 32000, 16, 5.4, 5600, 'DDR4/DDR5', 253, 2299.90).
 
-% AMD Socket AM5 (DDR5 - Nova Geração)
+% AMD Socket AM5 (DDR5 - Nova Geracao)
 cpu('AMD', 'Ryzen 5 7600X', 'AM5', 25000, 6, 5.3, 5200, 'DDR5', 105, 1499.90).
 cpu('AMD', 'Ryzen 7 7700X', 'AM5', 29000, 8, 5.4, 5200, 'DDR5', 105, 2199.90).
 
-% ==================== GPUs (PLACAS DE VÍDEO) ====================
+% ==================== GPUs (PLACAS DE VIDEO) ====================
 % gpu(Marca, Modelo, MemoriaGB, G3DMark, PrecoBRL)
 gpu('NVIDIA', 'RTX 4060', 8, 17800, 2199.90).
 gpu('NVIDIA', 'RTX 4060 Ti', 8, 19540, 2799.90).
@@ -36,7 +36,7 @@ gpu('NVIDIA', 'RTX 4070 Ti', 12, 38050, 4899.90).
 gpu('NVIDIA', 'RTX 4080', 16, 45680, 7299.90).
 gpu('AMD', 'RX 7900 XT', 20, 38500, 5999.90).
 
-% ==================== RAM (MEMÓRIA) ====================
+% ==================== RAM (MEMORIA) ====================
 % ram(Marca, Modelo, CapacidadeGB, VelocidadeMHz, TipoDDR, PrecoBRL)
 ram('Kingston', 'FURY Beast', 16, 3200, 'DDR4', 229.90).
 ram('Corsair', 'Vengeance LPX', 16, 3200, 'DDR4', 249.90).
@@ -68,7 +68,7 @@ fonte('Corsair', 'RM850x', 850, '80 Plus Gold', 699.90).
 fonte('NZXT', 'C850', 850, '80 Plus Gold', 799.90).
 fonte('Corsair', 'RM1000x', 1000, '80 Plus Gold', 999.90).
 
-% ==================== PLACAS-MÃE ====================
+% ==================== PLACAS-MAE ====================
 % placa_mae(Marca, Modelo, Soquete, Chipset, TipoRAM, PrecoBRL)
 % AMD AM4 (DDR4)
 placa_mae('ASRock', 'A520M-HDV', 'AM4', 'A520', 'DDR4', 429.90).
@@ -110,15 +110,15 @@ compatibilidade_chipset('B760', 'Intel', 'Core i-13xxx').
 compatibilidade_chipset('Z790', 'Intel', 'Core i-12xxx').
 compatibilidade_chipset('Z790', 'Intel', 'Core i-13xxx').
 
-% ==================== REQUISITOS POR RESOLUÇÃO ====================
+% ==================== REQUISITOS POR RESOLUCAO ====================
 % requisitos_resolucao(Resolucao, G3DMark_Min, RAM_Min_GB, SSD_Min_GB, Fonte_Min_W, CPU_Min_Perf)
 requisitos_resolucao('1080p', 15000, 16, 500, 500, 12000).     % Full HD - eSports
 requisitos_resolucao('1440p', 25000, 16, 1000, 650, 18000).    % Quad HD - High-End
 requisitos_resolucao('4k', 35000, 32, 1000, 750, 24000).       % Ultra HD - Ultra
 requisitos_resolucao('ultrawide', 30000, 32, 1000, 750, 22000). % UWQHD - Imersivo
 
-% ==================== LÓGICA DE COMPATIBILIDADE DE CHIPSET ====================
-% Determina a família da CPU baseada no modelo
+% ==================== LOGICA DE COMPATIBILIDADE DE CHIPSET ====================
+% Determina a familia da CPU baseada no modelo
 determinar_familia_cpu('AMD', ModeloCPU, Familia) :-
     sub_atom(ModeloCPU, 0, 6, _, 'Ryzen '),
     sub_atom(ModeloCPU, 6, 1, _, Digito),
@@ -132,14 +132,14 @@ determinar_familia_cpu('Intel', ModeloCPU, Familia) :-
     atom_concat('Core i-', Prefixo, FamiliaTemp),
     atom_concat(FamiliaTemp, 'xxx', Familia).
 
-% Verifica compatibilidade entre CPU e chipset da placa-mãe
+% Verifica compatibilidade entre CPU e chipset da placa-mae
 cpu_compativel_placa(cpu(Marca, Modelo, Soquete, _, _, _, _, _, _, _), 
-                     placa_mae(_, _, SoquetePlaca, Chipset, _, _)) :-
+                    placa_mae(_, _, SoquetePlaca, Chipset, _, _)) :-
     Soquete == SoquetePlaca,
     determinar_familia_cpu(Marca, Modelo, FamiliaCPU),
     compatibilidade_chipset(Chipset, Marca, FamiliaCPU).
 
-% Verifica se tipo de RAM é compatível com CPU
+% Verifica se tipo de RAM e compativel com CPU
 ram_compativel_cpu(TipoRAM, cpu(_, _, _, _, _, _, _, MemSupCPU, _, _)) :-
     (sub_atom(MemSupCPU, _, _, _, '/') ->
         split_string(MemSupCPU, "/", "", ListaTipos),
