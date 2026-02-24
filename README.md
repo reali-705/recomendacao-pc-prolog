@@ -1,12 +1,9 @@
-# Sistema de Recomendação de Componentes para PC
-
-## 📚 Informações Acadêmicas
+# Sistema Especialista de Recomendação de Hardware (PC Builder)
 
 **Instituição:** Universidade Federal do Pará (UFPA)  
 **Disciplina:** Programação em Lógica  
 **Professor:** Josivan Rodrigues dos Reis  
-
-**Integrantes do Grupo:**
+**Equipe:**
 
 - Alessandro Reali Lopes Silva
 - Jhonata Bezerra Figueiredo
@@ -14,156 +11,72 @@
 
 ---
 
-## 📋 Sobre o Projeto
+## 1. Contextualização e Problemática
 
-Sistema especialista em Prolog para recomendação de componentes de PC baseado em orçamento e resolução de jogos desejada (1080p, 1440p ou 4K).
+A montagem de computadores desktop é um processo que envolve um alto grau de complexidade combinatória e risco financeiro. Para um usuário leigo, escolher componentes no mercado atual exige cruzar dezenas de especificações técnicas (gerações de processadores, soquetes de placa-mãe, padrões de memória volátil e requisitos de potência térmica/elétrica).
 
-### Componentes Recomendados:
+**A Problemática:** Escolhas incorretas geram dois cenários de falha críticos:
 
-- GPU (Placa de Vídeo)
-- RAM (Memória)
-- SSD (Armazenamento)
-- Fonte de Alimentação
-- Placa-Mãe
+1. **Incompatibilidade Física/Lógica:** Componentes que não operam juntos (ex: processador AM4 em placa-mãe LGA1700, ou memórias DDR5 em slots DDR4).
+2. **Gargalo de Sistema (Bottleneck):** Desperdício de orçamento ao parear componentes de alto desempenho com peças de entrada, limitando a eficiência computacional do sistema.
+
+**A Solução:** Desenvolvemos um Sistema Especialista em Prolog que atua como um consultor automatizado. O algoritmo resolve esse Problema de Satisfação de Restrições (CSP - *Constraint Satisfaction Problem*), filtrando uma base de dados de hardware através de múltiplos níveis de análise para entregar configurações otimizadas e garantidas contra incompatibilidades.
 
 ---
 
-## 🚀 Como Executar
+## 2. Níveis de Análise e Questionamentos do Sistema
 
-### 1. Pré-requisitos
+Para gerar uma recomendação válida, o motor de inferência submete a base de conhecimento a três camadas rígidas de questionamentos (filtros lógicos):
 
-- **SWI-Prolog** instalado ([Download](https://www.swi-prolog.org/Download.html))
-- Verificar se está nas variáveis de ambiente: `C:\Program Files\swipl\bin`
+### Nível 1: Análise de Desempenho Alvo (Heurística de Resolução)
 
-### 2. Iniciar o Sistema
+O sistema não recomenda peças aleatórias. A primeira restrição é baseada no caso de uso do cliente:
 
-Abra o terminal na pasta do projeto e execute:
+- *Pergunta do Sistema:* "Qual a resolução gráfica que o usuário deseja atingir (1080p, 1440p, 4K)?"
+- *Lógica:* Cada resolução define um *threshold* (limite mínimo) rígido. Para 1080p, o sistema exige uma GPU com no mínimo 15.000 pontos no G3DMark, 16GB de RAM e fonte de 500W.
 
-```powershell
+### Nível 2: Análise de Compatibilidade (Restrições de Hardware)
+
+Esta é a validação estrutural da máquina. O algoritmo cruza as propriedades das peças para evitar falhas de montagem:
+
+- *Pergunta do Sistema:* "O soquete da Placa-Mãe é idêntico ao exigido pela CPU?"
+- *Pergunta do Sistema:* "A arquitetura da RAM (DDR4 ou DDR5) é suportada nativamente pela Placa-Mãe E pela geração do Processador?"
+- *Lógica:* O Prolog utiliza unificação de variáveis para garantir que `SoqueteMB == SoqueteCPU` e `TipoRAM_MB == TipoRAM`. Se a unificação falhar, o *backtracking* descarta a árvore de possibilidades e busca outra peça.
+
+### Nível 3: Análise de Viabilidade Financeira (Otimização de Orçamento)
+
+- *Pergunta do Sistema:* "O somatório do custo das peças selecionadas cabe no bolso do usuário?"
+- *Lógica:* O sistema soma o custo de GPU, CPU, Placa-Mãe, RAM, SSD e Fonte. Foi implementada uma heurística de tolerância de 20% (`OrcamentoComMargem is OrcamentoTotal * 1.2`) para evitar que o sistema descarte uma configuração muito superior por uma diferença ínfima de valor, retornando sempre as combinações com a menor variância (diferença) em relação ao alvo financeiro original.
+
+---
+
+## 3. Principais Regras e Estruturas Utilizadas
+
+O motor de recomendação está centralizado no predicado `pc_recomendacao/3`. A execução segue a ordem lógica:
+
+1. **Definição de Requisitos Base:** Consulta `requisitos_resolucao` para buscar os requisitos mínimos de G3DMark, RAM e Fonte baseados na entrada do usuário.
+2. **Filtragem e Unificação:** Busca na base de fatos (ex: `gpu(...)`, `cpu(...)`) componentes que satisfaçam os limiares mínimos (`>=`).
+3. **Validação Cruzada:** A regra `ram_compativel_cpu/2` é acionada para garantir compatibilidade da controladora de memória.
+4. **Cálculo de Custo:** As variáveis de preço são agregadas (`PrecoTotal is ...`).
+5. **Ordenação (*Sorting*):** O predicado `melhores_recomendacoes/3` utiliza o `findall` para gerar todas as árvores válidas de configuração e ordena o retorno através de `sort_by_difference`, entregando apenas o *Top 3* de configurações para evitar sobrecarga cognitiva no usuário final.
+
+---
+
+## 4. Manual de Execução Rápida
+
+Para executar a simulação e testar as regras apresentadas:
+
+1. Instale o ambiente SWI-Prolog.
+2. No diretório raiz do projeto, inicialize a interface via terminal:
+
+```bash
 swipl -s main.pl
 ```
 
-Você verá a mensagem:
+3. O Menu Principal será carregado. Para testar o núcleo do algoritmo de recomendação, selecione a Opção 1 ou utilize comandos interativos, como:
 
-```prolog
-=== SISTEMA DE RECOMENDACAO DE PC ===
-Consulte usando: "melhores_recomendacoes(Orcamento, Resolucao, Top3)."
-Exemplo: melhores_recomendacoes(5000, '1080p', Top3).
-
-?- 
-```
-
----
-
-## 💻 Comandos de Consulta
-
-### 1. Buscar as 3 Melhores Recomendações
-
-```prolog
+```Prolog
 ?- melhores_recomendacoes(5000, '1080p', Top3).
 ```
 
-**Parâmetros:**
-
-- `5000` - Orçamento em Reais (BRL)
-- `'1080p'` - Resolução desejada (`'1080p'`, `'1440p'` ou `'4k'`)
-- `Top3` - Variável que receberá as recomendações
-
-### 2. Exibir Recomendação Formatada
-
-Após obter uma recomendação, exiba-a formatada:
-
-```prolog
-?- melhores_recomendacoes(5000, '1080p', [PC|_]), mostrar_recomendacao(PC).
-```
-
-**Saída esperada:**
-
-```prolog
-=== RECOMENDACAO PARA 1080p ===
-Preco Total: R$ 4869.59 (Diferença do orçamento: R$ 130.41)
-
-Componentes:
-- GPU: NVIDIA RTX 4060 Ti (8GB, 19540 pontos) - R$ 2799.90
-- RAM: Corsair Vengeance LPX (16GB, 3200MHz) - R$ 249.90
-- SSD: Kingston NV2 (1000GB, 3500 MB/s) - R$ 299.99
-- Fonte: Cooler Master MWE Gold 850 V3 (850W, 80 Plus Gold) - R$ 449.99
-- Placa-mae: ASUS TUF Gaming B550-PLUS (AM4, B550) - R$ 899.90
-```
-
-### 3. Consultas Auxiliares
-
-#### Recomendar GPU por desempenho
-
-```prolog
-?- recomendar_gpu_desempenho(20000, GPU).
-```
-
-#### Recomendar Fonte por potência
-
-```prolog
-?- recomendar_fonte(500, 'qualquer', Fonte).
-```
-
-#### Recomendar SSD por capacidade
-
-```prolog
-?- recomendar_ssd(500, 'qualquer', SSD).
-```
-
-#### Verificar compatibilidade RAM/Placa-Mãe
-
-```prolog
-?- compativel_ram_placa('TUF Gaming B550-PLUS', RAM).
-```
-
 ---
-
-## 📂 Estrutura do Projeto
-
-```bash
-trab-prolog/
-├── main.pl          # Arquivo principal (ponto de entrada)
-├── dados.pl         # Base de dados de componentes
-├── regras.pl        # Regras de recomendação
-└── README.md        # Documentação
-```
-
----
-
-## 🎮 Requisitos por Resolução
-
-| Resolução | G3DMark Mín. | RAM Mín. | SSD Mín. | Fonte Mín. |
-| --- | --- | --- | --- | --- |
-| 1080p | 15.000 | 16 GB | 500 GB | 500W |
-| 1440p | 25.000 | 16 GB | 1000 GB | 650W |
-| 4K | 35.000 | 32 GB | 1000 GB | 750W |
-
----
-
-## 🛠️ Comandos Úteis do SWI-Prolog
-
-| Comando | Descrição |
-| --- | --- |
-| `halt.` | Sair do interpretador |
-| `Ctrl + D` | Sair (atalho) |
-| `Ctrl + C` → `e` | Sair |
-| `Ctrl + C` → `a` | Abortar consulta atual |
-| `listing(predicado).` | Mostrar definição de predicado |
-| `trace.` | Ativar modo debug |
-| `notrace.` | Desativar modo debug |
-
----
-
-## 📝 Exemplos de Uso
-
-```prolog
-% Exemplo 1: PC para 1080p com orçamento de R$ 5000
-?- melhores_recomendacoes(5000, '1080p', Top3).
-
-% Exemplo 2: PC para 1440p com orçamento de R$ 8000
-?- melhores_recomendacoes(8000, '1440p', [PC|_]), mostrar_recomendacao(PC).
-
-% Exemplo 3: PC para 4K com orçamento de R$ 12000
-?- melhores_recomendacoes(12000, '4k', Top3).
-```
